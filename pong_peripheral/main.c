@@ -67,8 +67,9 @@
 #include "cy8ckit_028_tft_pins.h"
 #include "mtb_st7789v.h"
 
-// Display task header file
+// Task header files
 #include "displayTask.h"
+#include "capsenseTask.h"
 
 /*******************************************************************************
 * Macros
@@ -107,35 +108,10 @@ static uint8_t *app_bt_alloc_buffer(uint16_t len);
 static void app_bt_free_buffer(uint8_t *p_data);
 
 /*******************************************************************************
-* Interrupt Service Routines
-********************************************************************************/
-// User button 1 interrupt handler
-static void button1_isr(void *handler_arg, cyhal_gpio_event_t event) {
-	if(gamePaddle.posY < SCREEN_MAX_Y - gamePaddle.dimY) {
-		// Update paddle position
-		gamePaddle.posY += 10;
-	}
-}
-
-// User button 2 interrupt handler
-static void button2_isr(void *handler_arg, cyhal_gpio_event_t event) {
-	if(gamePaddle.posY > 0) {
-		// Update paddle position
-		gamePaddle.posY -= 10;
-	}
-}
-
-/*******************************************************************************
 * Global Vars
 ********************************************************************************/
 /* Enable RTOS aware debugging in OpenOCD */
 volatile int uxTopUsedPriority;
-
-// User button 1 GPIO callback initialization structure
-cyhal_gpio_callback_data_t btn1_cb_data = {.callback = button1_isr, .callback_arg = NULL};
-
-// User button 2 GPIO callback initialization structure
-cyhal_gpio_callback_data_t btn2_cb_data = {.callback = button2_isr, .callback_arg = NULL};
 
 // Pins for the TFT display
 const mtb_st7789v_pins_t tft_pins = {.db08 = CY8CKIT_028_TFT_PIN_DISPLAY_DB8,
@@ -196,40 +172,7 @@ int main(void) {
 	/* Initialize retarget-io to use the debug UART port. */
 	cy_retarget_io_init(CYBSP_DEBUG_UART_TX, CYBSP_DEBUG_UART_RX, CY_RETARGET_IO_BAUDRATE);
 
-	/* Initialize the user button for moving the paddle right */
-	result = cyhal_gpio_init(CYBSP_USER_BTN, CYHAL_GPIO_DIR_INPUT, CYHAL_GPIO_DRIVE_PULLUP, CYBSP_BTN_OFF);
-	/* GPIO init failed. Stop program execution */
-	if(result != CY_RSLT_SUCCESS) {
-		CY_ASSERT(0);
-	}
-
-	/* Initialize the user button for moving the paddle left */
-	result = cyhal_gpio_init(CYBSP_USER_BTN2, CYHAL_GPIO_DIR_INPUT, CYHAL_GPIO_DRIVE_PULLUP, CYBSP_BTN_OFF);
-	/* GPIO init failed. Stop program execution */
-	if(result != CY_RSLT_SUCCESS) {
-		CY_ASSERT(0);
-	}
-
-	/* Configure GPIO interrupt for moving the paddle right*/
-	cyhal_gpio_register_callback(CYBSP_USER_BTN, &btn1_cb_data);
-	cyhal_gpio_enable_event(CYBSP_USER_BTN, CYHAL_GPIO_IRQ_FALL, GPIO_INTERRUPT_PRIORITY, true);
-	Cy_GPIO_SetFilter(P0_4_PORT, P0_4_NUM);
-
-	/* Configure GPIO interrupt for moving the paddle right*/
-	cyhal_gpio_register_callback(CYBSP_USER_BTN2, &btn2_cb_data);
-	cyhal_gpio_enable_event(CYBSP_USER_BTN2, CYHAL_GPIO_IRQ_FALL, GPIO_INTERRUPT_PRIORITY, true);
-	Cy_GPIO_SetFilter(P1_4_PORT, P1_4_NUM);
-
-	// Initialize the display
-	mtb_st7789v_init8(&tft_pins);
-
-	// Initialize the emwin library
-	GUI_Init();
-
-	// Clear the display
-	GUI_Clear();
-
-	/* \x1b[2J\x1b[;H - ANSI ESC sequence to clear screen. */
+	/* \x1b[2J\x1b[;H - ANSI ESC sequence to clear UART screen. */
 	printf("\x1b[2J\x1b[;H");
 	printf("BLE Pong Peripheral\n");
 
@@ -266,6 +209,15 @@ static wiced_result_t app_bt_management_callback(wiced_bt_management_evt_t event
 		case BTM_ENABLED_EVT:    // Bluetooth Controller and Host Stack Enabled
 			if(WICED_BT_SUCCESS == p_event_data->enabled.status) {
 				printf("Bluetooth Enabled\n");
+
+				// Initialize the display
+				mtb_st7789v_init8(&tft_pins);
+
+				// Initialize the emwin library
+				GUI_Init();
+
+				// Clear the display
+				GUI_Clear();
 
 				/* Set the local BDA from the value in the configurator and print it */
 				wiced_bt_set_local_bdaddr((uint8_t *)cy_bt_device_address, BLE_ADDR_PUBLIC);
@@ -432,7 +384,8 @@ static wiced_bt_gatt_status_t app_bt_connect_event_handler(wiced_bt_gatt_connect
 			cyhal_pwm_set_duty_cycle(&status_pwm_obj, LED_ON_DUTY, 2);    // LED Solid when connected
 
 			// Start the game
-			/* Create the display task. */
+			/* Create the display and CAPSENSE tasks. */
+			xTaskCreate(capsenseTask, "CapSense Task", CAPSENSE_TASK_STACK_SIZE, NULL, CAPSENSE_TASK_PRIORITY, NULL);
 			xTaskCreate(displayTask, "Display task", DISPLAY_TASK_STACK_SIZE, NULL, DISPLAY_TASK_PRIORITY, &display_task_handle);
 		} else {
 			/* Handle the disconnection */
@@ -561,8 +514,11 @@ static wiced_bt_gatt_status_t app_bt_write_handler(wiced_bt_gatt_event_data_t *p
 						gameBall.speedY = app_pong_ball[7];
 						gameBall.speedY = gameBall.speedY << 8;
 						gameBall.speedY |= app_pong_ball[6];
-						printf("Game Ball Data Received via Write:\nposX: %d\nposY: %d\nspeedX: %d\nspeedY: %d\n", gameBall.posX, gameBall.posY,
-							   gameBall.speedX, gameBall.speedY);
+						gameBall.numBounces = app_pong_ball[9];
+						gameBall.numBounces = gameBall.numBounces << 8;
+						gameBall.numBounces |= app_pong_ball[8];
+						printf("Game Ball Data Received via Write:\nposX: %d\nposY: %d\nspeedX: %d\nspeedY: %d\nNumber of Bounces: %d\n", gameBall.posX, gameBall.posY,
+							   gameBall.speedX, gameBall.speedY, gameBall.numBounces);
 						hasBall = true;
 						break;
 				}

@@ -24,6 +24,15 @@
 #define SCREEN_MAX_X (320 - 1)
 #define SCREEN_MAX_Y (240 - 1)
 
+#define PADDLE_WIDTH  (40)
+#define PADDLE_HEIGHT (10)
+
+#define PADDLE_START_X (((SCREEN_MAX_X/2) - (PADDLE_WIDTH/2)))
+
+#define BALL_SIZE     (10)
+
+#define BALL_START_X (((SCREEN_MAX_X/2) - (BALL_SIZE/2)))
+
 /*******************************************************************************
 * Extern Variables
 ********************************************************************************/
