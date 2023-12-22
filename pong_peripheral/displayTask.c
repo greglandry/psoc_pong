@@ -135,8 +135,8 @@ void displayTask(void *arg) {
 						// Update characteristic values with the ball values
 						app_pong_ball[0] = (SCREEN_MAX_X - gameBall.posX);
 						app_pong_ball[1] = (SCREEN_MAX_X - gameBall.posX) >> 8;
-						app_pong_ball[2] = gameBall.posY;
-						app_pong_ball[3] = gameBall.posY >> 8;
+						app_pong_ball[2] = 0; /* Always send Y position of 0 even if negative */
+						app_pong_ball[3] = 0;
 						app_pong_ball[4] = -(gameBall.speedX);
 						app_pong_ball[5] = -(gameBall.speedX) >> 8;
 						app_pong_ball[6] = -(gameBall.speedY);

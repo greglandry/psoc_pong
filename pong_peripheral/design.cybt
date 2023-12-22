@@ -139,7 +139,7 @@
                                         </BleProperty>
                                         <BleProperty>
                                             <Property id="PropertyType" value="WriteWithoutResponse"/>
-                                            <Property id="Present" value="false"/>
+                                            <Property id="Present" value="true"/>
                                             <Property id="Mandatory" value="false"/>
                                         </BleProperty>
                                         <BleProperty>
@@ -178,7 +178,7 @@
                                         <Property id="ReadAuthenticated" value="false"/>
                                         <Property id="VariableLength" value="false"/>
                                         <Property id="Write" value="true"/>
-                                        <Property id="WriteNoResponse" value="false"/>
+                                        <Property id="WriteNoResponse" value="true"/>
                                         <Property id="WriteReliable" value="false"/>
                                         <Property id="WriteAuthenticated" value="false"/>
                                     </Permission>
@@ -214,7 +214,7 @@
                                                 <Property id="ReadAuthenticated" value="false"/>
                                                 <Property id="VariableLength" value="false"/>
                                                 <Property id="Write" value="true"/>
-                                                <Property id="WriteNoResponse" value="false"/>
+                                                <Property id="WriteNoResponse" value="true"/>
                                                 <Property id="WriteReliable" value="false"/>
                                                 <Property id="WriteAuthenticated" value="false"/>
                                             </Permission>

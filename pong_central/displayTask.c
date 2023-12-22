@@ -138,7 +138,7 @@ void displayTask(void *arg) {
 			if(gameBall.posY <= 0 && gameBall.speedY < 0) {
 				//Populate write buffer
 				uint16_t writeData[5] = {(SCREEN_MAX_X - gameBall.posX),
-										 (gameBall.posY),
+										 (0), /* Always send  Y position of 0 even if negative */
 										 -(gameBall.speedX),
 										 -(gameBall.speedY),
 										 gameBall.numBounces};
